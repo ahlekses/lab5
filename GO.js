@@ -93,30 +93,7 @@ async migrate() {
         await this.pgClient.query('CREATE SCHEMA IF NOT EXISTS lab5 AUTHORIZATION postgres');
 
       
-        const [patients] = await this.mysqlConnection.query('SELECT * FROM `patient`');
-        for (const patient of patients) {
-            await this.pgClient.query(
-                `INSERT INTO lab5.patient (id, fullname, address, contactno, eadd, sex) VALUES ($1, $2, $3, $4, $5, $6)`,
-                [patient.id, `${patient.FirstName} ${patient.MiddleName || ''} ${patient.LastName}`.trim(), patient.Address, patient.ContactNumber, patient.EmailAddress, patient.Sex === 'Female']
-            );
-        }
-
-
-        const [records] = await this.mysqlConnection.query('SELECT * FROM `diabetestdiagnosisrecords`');
-        for (const record of records) {
-            await this.pgClient.query(
-                `INSERT INTO lab5.rc_checkup (p_id, glucose, bp, skinthickness, bmi) VALUES ($1, $2, $3, $4, $5)`,
-                [record.patientId, record.Glucose, record.BloodPressure, record.SkinThickness, record.BMI > 25]
-            );
-            await this.pgClient.query(
-                `INSERT INTO lab5.rc_labtest (p_id, insulin, diapedifunction, outcome, lb_id) VALUES ($1, $2, $3, $4, $5)`,
-                [record.patientId, record.Insulin, record.DiabetesPedigreeFunction, record.Outcome === 1, record.patientId]
-            );
-            await this.pgClient.query(
-                `INSERT INTO lab5.rc_precords (p_id, age, pregnancy) VALUES ($1, $2, $3)`,
-                [record.patientId, record.Age, record.Pregnancies]
-            );
-        }
+     
 
         console.log(chalk.green('✅ Migration completed successfully'));
         await this.mysqlConnection.end();
