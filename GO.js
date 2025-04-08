@@ -92,12 +92,63 @@ async migrate() {
 
         await this.pgClient.query('CREATE SCHEMA IF NOT EXISTS lab5 AUTHORIZATION postgres');
 
-      
-     
+      try {
+        
+        const [patients] = await this.mysqlConnection.query(`select * from patient`)
+        for (const patientrecord of patients){
 
+            await this.pgClient.query(
+
+            `insert into lab5.patient (id, fullname, contactno, address, eadd, sex) values ($1, $2, $3, $4, $5, $6)`,
+            [patientrecord.id, `${patientrecord.FirstName} ${patientrecord.MiddleName || ''} ${patientrecord.LastName}`.trim(), 
+                patientrecord.ContactNumber, patientrecord.Address, patientrecord.EmailAddress, patientrecord.sex === "Female" ]
+            )
+        }
+ 
+        const [diabetes] = await this.mysqlConnection.query(`select * from diabetestdiagnosisrecords`)
+        for(const diabetesrecords of diabetes){
+            await this.pgClient.query(
+                                `INSERT INTO lab5.rc_checkup(
+                    p_id, glucose, bp, skinthickness, bmi)
+                    VALUES ($1, $2, $3, $4, $5);`,
+                    [diabetesrecords.patientId, diabetesrecords.Glucose, 
+                        diabetesrecords.BloodPressure,
+                        diabetesrecords.SkinThickness, diabetesrecords.BMI
+                     ]       
+            )
+
+                        await this.pgClient.query(
+                            `INSERT INTO lab5.rc_labtest(
+                p_id, insulin, diapedifunction, outcome)
+                VALUES ($1, $2, $3, $4);`,
+                [diabetesrecords.patientId,
+                    diabetesrecords.Insulin,
+                    diabetesrecords.DiabetesPedigreeFunction,
+                    diabetesrecords.Outcome === 1,
+                ]       
+            )
+
+
+            await this.pgClient.query(
+                `INSERT INTO lab5.rc_precords(
+	p_id, age, pregnancy)
+	VALUES ($1, $2, $3);`,
+    [diabetesrecords.patientId,
+        diabetesrecords.Age,
+        diabetesrecords.Pregnancies,
+    ]       
+)
+        }
         console.log(chalk.green('✅ Migration completed successfully'));
+       
+      } catch (error) {
+        console.log(error)
+      }
+     
         await this.mysqlConnection.end();
         await this.pgClient.end();
+
+       
     }
 }
 
